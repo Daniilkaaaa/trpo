@@ -1,0 +1,68 @@
+@startuml Контейнеры платформы краудфандинга
+!include <C4/C4_Container>
+
+Person(author, "Автор проекта", "публикация проектов, сбор средств, отчетность")
+Person(backer, "Спонсор", "финансирование проектов, отслеживание прогресса")
+Person(admin, "Администратор", "модерация проектов, управление пользователями")
+
+System_Boundary(crowd_platform, "Краудфандинг Платформа") {
+    Container(web_app, "Веб-приложение", "React, TypeScript", "Интерфейс для пользователей")
+    Container(mobile_app, "Мобильное приложение", "Flutter", "iOS и Android приложение")
+    
+    ContainerDb(database, "База данных", "PostgreSQL", "Основное хранилище данных")
+    ContainerDb(cache, "Кэш", "Redis", "Кэширование часто запрашиваемых данных")
+    
+    System_Boundary(backend_services, "Сервисы бэкенда") {
+        Container(auth_service, "Аутентификация", "Node.js", "Управление пользователями, авторизация")
+        Container(project_service, "Проекты", "Python", "Создание и управление проектами")
+        Container(payment_service, "Платежи", "Java", "Обработка транзакций")
+        Container(notification_service, "Уведомления", "Node.js", "Email/SMS уведомления")
+        Container(analytics_service, "Аналитика", "Python", "Сбор метрик и статистики")
+        Container(search_service, "Поиск", "Elasticsearch", "Поиск и фильтрация проектов")
+    }
+    
+    Container(message_queue, "Брокер сообщений", "RabbitMQ", "Асинхронная коммуникация")
+}
+
+System_Ext(payment_gateway, "Платежный шлюз", "Stripe/Tinkoff")
+System_Ext(email_service, "Email сервис", "SendGrid/Mailgun")
+System_Ext(social_media, "Социальные сети", "Facebook/VK/Instagram")
+System_Ext(cloud_storage, "Облачное хранилище", "S3/Yandex Object Storage")
+
+' Пользовательские взаимодействия
+Rel(author, web_app, "Публикует проекты")
+Rel(author, mobile_app, "Управляет проектами")
+Rel(backer, web_app, "Ищет и финансирует проекты")
+Rel(backer, mobile_app, "Следит за проектами")
+Rel(admin, web_app, "Модерирует контент")
+
+' Фронтенд-бэкенд взаимодействия
+Rel(web_app, backend_services, "API запросы", "REST/HTTPS")
+Rel(mobile_app, backend_services, "API запросы", "REST/HTTPS")
+
+' Взаимодействия между сервисами
+Rel(project_service, database, "Читает/пишет данные проектов", "JDBC")
+Rel(payment_service, database, "Читает/пишет данные транзакций", "JDBC")
+Rel(auth_service, database, "Читает/пишет данные пользователей", "JDBC")
+Rel(analytics_service, database, "Анализирует данные", "JDBC")
+
+Rel(project_service, cache, "Кэширует популярные проекты", "Redis Protocol")
+Rel(auth_service, cache, "Кэширует сессии", "Redis Protocol")
+
+Rel(project_service, search_service, "Индексирует проекты", "REST")
+Rel(web_app, search_service, "Поисковые запросы", "REST")
+
+' Асинхронные взаимодействия
+Rel(project_service, message_queue, "Отправляет события о проектах")
+Rel(payment_service, message_queue, "Отправляет события о платежах")
+Rel(notification_service, message_queue, "Читает события для уведомлений")
+Rel(analytics_service, message_queue, "Читает события для анализа")
+
+' Интеграции с внешними системами
+Rel(payment_service, payment_gateway, "Обработка платежей", "REST API")
+Rel(notification_service, email_service, "Отправка email", "SMTP/API")
+Rel(web_app, social_media, "Шеринг проектов", "OAuth/Share API")
+Rel(web_app, cloud_storage, "Загрузка медиафайлов", "S3 API")
+
+SHOW_LEGEND()
+@enduml

@@ -1,0 +1,29 @@
+@startuml Контекст платформы краудфандинга
+!include <C4/C4_Context>
+
+' =================== ПОЛЬЗОВАТЕЛИ ===================
+Person(author, "Автор проекта", "публикация проектов, сбор средств, отчетность")
+Person(backer, "Спонсор", "финансирование проектов, отслеживание прогресса")
+Person(admin, "Администратор", "модерация проектов, управление пользователями")
+
+' =================== СИСТЕМЫ ===================
+System(crowd_platform, "CrowdFund Platform", "Платформа для краудфандинга проектов")
+
+' =================== ВНЕШНИЕ СИСТЕМЫ ===================
+System_Ext(payment, "Платежные системы", "Stripe, PayPal, Tinkoff")
+System_Ext(social, "Социальные сети", "Facebook, VK, Instagram")
+System_Ext(email, "Email-сервис", "SendGrid, Mailgun")
+System_Ext(storage, "Облачное хранилище", "S3, Google Cloud")
+
+' =================== ВЗАИМОДЕЙСТВИЯ ===================
+Rel(author, crowd_platform, "Создает проекты и отчеты")
+Rel(backer, crowd_platform, "Финансирует и отслеживает проекты")
+Rel(admin, crowd_platform, "Управляет платформой")
+
+Rel(crowd_platform, payment, "Обрабатывает платежи")
+Rel(crowd_platform, social, "Публикует и делится проектами")
+Rel(crowd_platform, email, "Отправляет уведомления")
+Rel(crowd_platform, storage, "Хранит медиафайлы")
+
+SHOW_LEGEND()
+@enduml

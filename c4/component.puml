@@ -1,0 +1,124 @@
+@startuml Компоненты платформы краудфандинга
+!include <C4/C4_Component>
+
+Container(web_app, "Веб-приложение", "React, TypeScript")
+Container(mobile_app, "Мобильное приложение", "Flutter")
+
+System_Boundary(project_services, "Сервис Проектов") {
+    Component(project_controller, "Контроллер проектов", "Обрабатывает HTTP запросы для проектов")
+    Component(category_controller, "Контроллер категорий", "Обрабатывает HTTP запросы для категорий")
+    Component(review_controller, "Контроллер отзывов", "Обрабатывает HTTP запросы для отзывов")
+
+    Component(project_service, "Сервис проектов", "Бизнес-логика проектов")
+    Component(category_service, "Сервис категорий", "Бизнес-логика категорий")
+    Component(review_service, "Сервис отзывов", "Бизнес-логика отзывов")
+    Component(search_service, "Сервис поиска", "Поиск и фильтрация проектов")
+
+    Component(project_repo, "Репозиторий проектов", "Управление данными проектов")
+    Component(category_repo, "Репозиторий категорий", "Управление данными категорий")
+    Component(review_repo, "Репозиторий отзывов", "Управление данными отзывов")
+    Component(media_repo, "Репозиторий медиа", "Управление медиафайлами")
+}
+
+System_Boundary(payment_services, "Сервис Платежей") {
+    Component(payment_controller, "Контроллер платежей", "Обрабатывает HTTP запросы для платежей")
+    Component(transaction_controller, "Контроллер транзакций", "Обрабатывает HTTP запросы для транзакций")
+    Component(refund_controller, "Контроллер возвратов", "Обрабатывает HTTP запросы для возвратов")
+
+    Component(payment_service, "Сервис платежей", "Бизнес-логика платежей")
+    Component(transaction_service, "Сервис транзакций", "Бизнес-логика транзакций")
+    Component(fraud_service, "Антифрод сервис", "Обнаружение мошенничества")
+    Component(accounting_service, "Сервис учета", "Учет средств и комиссий")
+
+    Component(payment_repo, "Репозиторий платежей", "Управление данными платежей")
+    Component(transaction_repo, "Репозиторий транзакций", "Управление данными транзакций")
+}
+
+System_Boundary(user_services, "Сервис Пользователей") {
+    Component(auth_controller, "Контроллер аутентификации", "Обрабатывает HTTP запросы для аутентификации")
+    Component(user_controller, "Контроллер пользователей", "Обрабатывает HTTP запросы для пользователей")
+    Component(profile_controller, "Контроллер профилей", "Обрабатывает HTTP запросы для профилей")
+
+    Component(auth_service, "Сервис аутентификации", "Бизнес-логика аутентификации")
+    Component(user_service, "Сервис пользователей", "Бизнес-логика пользователей")
+    Component(verification_service, "Сервис верификации", "Верификация пользователей")
+    Component(session_service, "Сервис сессий", "Управление сессиями")
+
+    Component(user_repo, "Репозиторий пользователей", "Управление данными пользователей")
+    Component(session_repo, "Репозиторий сессий", "Управление данными сессий")
+}
+
+ContainerDb(main_db, "База данных", "PostgreSQL", "Основная база данных")
+ContainerDb(cache_db, "База данных", "Redis", "Кэш и сессии")
+ContainerDb(analytics_db, "База данных", "ClickHouse", "Аналитическая база данных")
+ContainerDb(file_storage, "Файловое хранилище", "S3", "Медиафайлы проектов")
+
+Component_Ext(rabbitmq, "RabbitMQ", "Брокер сообщений")
+Component_Ext(payment_gateway, "Платежный шлюз", "Stripe/Tinkoff")
+Component_Ext(email_service, "Email сервис", "SendGrid")
+Component_Ext(social_api, "Social API", "Facebook/VK OAuth")
+
+' Веб и мобильные приложения -> Сервисы
+Rel(web_app, project_controller, "HTTP запросы проектов")
+Rel(web_app, payment_controller, "HTTP запросы платежей")
+Rel(web_app, auth_controller, "HTTP запросы аутентификации")
+
+Rel(mobile_app, project_controller, "HTTP запросы проектов")
+Rel(mobile_app, payment_controller, "HTTP запросы платежей")
+Rel(mobile_app, auth_controller, "HTTP запросы аутентификации")
+
+' Контроллеры -> Сервисы внутри систем
+Rel(project_controller, project_service, "Вызовы бизнес-логики")
+Rel(category_controller, category_service, "Вызовы бизнес-логики")
+Rel(review_controller, review_service, "Вызовы бизнес-логики")
+
+Rel(payment_controller, payment_service, "Вызовы бизнес-логики")
+Rel(transaction_controller, transaction_service, "Вызовы бизнес-логики")
+
+Rel(auth_controller, auth_service, "Вызовы бизнес-логики")
+Rel(user_controller, user_service, "Вызовы бизнес-логики")
+
+' Сервисы -> Репозитории
+Rel(project_service, project_repo, "Сохраняет/читает данные")
+Rel(category_service, category_repo, "Сохраняет/читает данные")
+Rel(review_service, review_repo, "Сохраняет/читает данные")
+Rel(project_service, media_repo, "Сохраняет/читает медиа")
+
+Rel(payment_service, payment_repo, "Сохраняет/читает данные")
+Rel(transaction_service, transaction_repo, "Сохраняет/читает данные")
+
+Rel(auth_service, user_repo, "Сохраняет/читает данные")
+Rel(session_service, session_repo, "Сохраняет/читает данные")
+
+' Репозитории -> Базы данных
+Rel(project_repo, main_db, "Сохраняет/читает данные")
+Rel(category_repo, main_db, "Сохраняет/читает данные")
+Rel(review_repo, main_db, "Сохраняет/читает данные")
+Rel(media_repo, file_storage, "Сохраняет/читает файлы")
+
+Rel(payment_repo, main_db, "Сохраняет/читает данные")
+Rel(transaction_repo, main_db, "Сохраняет/читает данные")
+
+Rel(user_repo, main_db, "Сохраняет/читает данные")
+Rel(session_repo, cache_db, "Сохраняет/читает кэш")
+
+' Поиск и аналитика
+Rel(search_service, analytics_db, "Индексирует данные для поиска")
+Rel(project_service, analytics_db, "Записывает аналитику")
+
+' Асинхронная коммуникация через RabbitMQ
+BiRel(project_service, rabbitmq, "События проектов")
+BiRel(payment_service, rabbitmq, "События платежей")
+BiRel(auth_service, rabbitmq, "События пользователей")
+
+' Интеграции с внешними системами
+Rel(payment_service, payment_gateway, "Обработка платежей", "REST API")
+Rel(auth_service, social_api, "OAuth аутентификация", "REST API")
+
+' Уведомления (через RabbitMQ)
+Component(notification_service, "Сервис уведомлений", "Отправка уведомлений")
+Rel(rabbitmq, notification_service, "Читает события")
+Rel(notification_service, email_service, "Отправляет email")
+
+SHOW_LEGEND()
+@enduml
