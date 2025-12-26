@@ -1,0 +1,115 @@
+@startuml
+title Диаграмма состояний: Процесс автора проекта
+
+state "Регистрация/Вход" as login
+state "ГлавнаяПлатформы" as main
+state "ПанельАвтора" as author_dashboard
+state "СозданиеПроекта" as create_project
+state "ЗаполнениеОписания" as fill_description
+state "ЗагрузкаМедиа" as upload_media
+state "НастройкаФинансов" as setup_finance
+state "ОтправкаНаМодерацию" as submit_moderation
+state "НаМодерации" as in_moderation
+state "Опубликован" as published
+state "ВПроцессеСбора" as funding_active
+state "ЦельДостигнута" as goal_achieved
+state "СборЗавершен" as funding_completed
+state "СборНеУдался" as funding_failed
+state "РеализацияПроекта" as project_execution
+state "ПубликацияОтчетов" as publish_reports
+state "ПроектЗавершен" as project_completed
+state "ЧерновикПроекта" as draft
+state "ТребуютсяПравки" as needs_revision
+state "Заблокирован" as blocked
+state "МоиПроекты" as my_projects
+state "АналитикаПроекта" as project_analytics
+state "ОбщениеСоСпонсорами" as communicate_sponsors
+
+[*] --> login
+login --> main : Успешная авторизация
+
+main --> author_dashboard : Нажал "Мои проекты"\nили "Создать проект"
+author_dashboard --> main : Нажал "На главную"
+
+' Создание нового проекта
+author_dashboard --> create_project : Нажал "Создать проект"
+create_project --> fill_description : Нажал "Далее"
+fill_description --> upload_media : Нажал "Далее"
+upload_media --> setup_finance : Нажал "Далее"
+setup_finance --> draft : Сохранил как черновик
+setup_finance --> submit_moderation : Нажал "Отправить на модерацию"
+
+' Работа с черновиком
+draft --> fill_description : Редактировать описание
+draft --> upload_media : Добавить медиа
+draft --> setup_finance : Изменить финансовые настройки
+draft --> submit_moderation : Отправить на модерацию
+draft --> author_dashboard : Вернуться в панель
+
+' Процесс модерации
+submit_moderation --> in_moderation : Автоматический переход
+in_moderation --> published : Модерация пройдена
+in_moderation --> needs_revision : Требуются правки
+in_moderation --> blocked : Проект отклонен
+
+needs_revision --> fill_description : Исправить описание
+needs_revision --> upload_media : Добавить/заменить медиа
+needs_revision --> setup_finance : Скорректировать цели
+needs_revision --> submit_moderation : Повторная отправка на модерацию
+needs_revision --> draft : Сохранить как черновик
+
+blocked --> author_dashboard : Вернуться в панель
+
+' Жизненный цикл опубликованного проекта
+published --> funding_active : Начат сбор средств
+funding_active --> funding_completed : Срок сбора истек
+funding_active --> goal_achieved : Цель достигнута досрочно
+
+funding_completed --> goal_achieved : Цель достигнута
+funding_completed --> funding_failed : Цель не достигнута
+
+goal_achieved --> project_execution : Начата реализация проекта
+project_execution --> publish_reports : Публикация промежуточных отчетов
+publish_reports --> project_execution : Продолжение реализации
+project_execution --> project_completed : Проект реализован
+project_completed --> publish_reports : Добавить финальный отчет
+
+' Навигация между проектами
+author_dashboard --> my_projects : Просмотр всех проектов
+my_projects --> draft : Выбрал черновик
+my_projects --> funding_active : Выбрал активный проект
+my_projects --> project_execution : Выбрал проект в реализации
+my_projects --> project_completed : Выбрал завершенный проект
+
+' Дополнительные возможности для активных проектов
+funding_active --> project_analytics : Просмотр статистики
+funding_active --> communicate_sponsors : Общение со спонсорами
+project_execution --> project_analytics : Отслеживание прогресса
+project_execution --> communicate_sponsors : Информирование спонсоров
+
+' Возвраты на главные экраны
+my_projects --> author_dashboard : Назад в панель
+project_analytics --> funding_active : Назад к проекту
+communicate_sponsors --> funding_active : Назад к проекту
+publish_reports --> project_execution : Назад к реализации
+
+' Выход из системы
+main --> [*] : Нажал "Выйти"
+author_dashboard --> [*] : Нажал "Выйти"
+
+note right of funding_failed
+  При неудачном сборе:
+  - Возврат средств спонсорам
+  - Проект переходит в архив
+  - Автор может создать новый проект
+end note
+
+note right of project_completed
+  После завершения проекта:
+  - Финальный отчет
+  - Благодарности спонсорам
+  - Проект в архиве
+  - Возможность нового проекта
+end note
+
+@enduml

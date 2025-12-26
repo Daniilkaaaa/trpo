@@ -1,0 +1,224 @@
+@startuml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+
+title Платформа Краудфандинга - Диаграмма развертывания
+
+' === KUBERNETES CLUSTER ===
+Deployment_Node(k8s_cluster, "Kubernetes Cluster", "AWS EKS - 4 ноды") {
+
+    ' === K8S SERVICES ===
+    Deployment_Node(services_layer, "Kubernetes Services", "Service Discovery & Load Balancing") {
+        Container(auth_service_svc, "auth-service", "K8s Service", "ClusterIP:8080")
+        Container(project_service_svc, "project-service", "K8s Service", "ClusterIP:8081")
+        Container(payment_service_svc, "payment-service", "K8s Service", "ClusterIP:8082")
+        Container(search_service_svc, "search-service", "K8s Service", "ClusterIP:8083")
+        Container(notification_service_svc, "notification-service", "K8s Service", "ClusterIP:8084")
+        Container(analytics_service_svc, "analytics-service", "K8s Service", "ClusterIP:8085")
+        Container(review_service_svc, "review-service", "K8s Service", "ClusterIP:8086")
+        Container(moderation_service_svc, "moderation-service", "K8s Service", "ClusterIP:8087")
+        Container(rabbitmq_service, "rabbitmq-service", "K8s Service", "ClusterIP:5672")
+        Container(redis_service, "redis-service", "K8s Service", "ClusterIP:6379")
+        Container(elastic_service, "elasticsearch-service", "K8s Service", "ClusterIP:9200")
+    }
+
+    ' === INGRESS & API GATEWAY ===
+    Deployment_Node(gateway_layer, "Gateway Layer", "ingress-nginx + Spring Cloud Gateway") {
+        Container(ingress_controller, "Ingress", "Nginx", "Входная точка")
+        Container(api_gateway, "API Gateway", "Spring Cloud Gateway", "Маршрутизация API")
+    }
+
+    ' === BACKEND NODE 1 ===
+    Deployment_Node(backend_node_1, "Node 1", "k8s-node-1 | c5.xlarge") {
+        Container(web_frontend_pod1, "Web Frontend", "React + TypeScript", "replica 1/3")
+        Container(auth_pod1, "Auth Service", "Node.js + NestJS", "replica 1/3")
+        Container(project_pod1, "Project Service", "Python + FastAPI", "replica 1/3")
+        Container(payment_pod1, "Payment Service", "Java + Spring Boot", "replica 1/3")
+        Container(rabbitmq_pod1, "RabbitMQ Node", "Erlang", "cluster node 1/3")
+        Container(redis_pod1, "Redis Node", "Redis", "cluster node 1/3")
+    }
+
+    ' === BACKEND NODE 2 ===
+    Deployment_Node(backend_node_2, "Node 2", "k8s-node-2 | c5.xlarge") {
+        Container(web_frontend_pod2, "Web Frontend", "React + TypeScript", "replica 2/3")
+        Container(auth_pod2, "Auth Service", "Node.js + NestJS", "replica 2/3")
+        Container(project_pod2, "Project Service", "Python + FastAPI", "replica 2/3")
+        Container(payment_pod2, "Payment Service", "Java + Spring Boot", "replica 2/3")
+        Container(search_pod1, "Search Service", "Python + FastAPI", "replica 1/2")
+        Container(analytics_pod1, "Analytics Service", "Python", "replica 1/2")
+        Container(rabbitmq_pod2, "RabbitMQ Node", "Erlang", "cluster node 2/3")
+        Container(redis_pod2, "Redis Node", "Redis", "cluster node 2/3")
+    }
+
+    ' === BACKEND NODE 3 ===
+    Deployment_Node(backend_node_3, "Node 3", "k8s-node-3 | c5.xlarge") {
+        Container(web_frontend_pod3, "Web Frontend", "React + TypeScript", "replica 3/3")
+        Container(search_pod2, "Search Service", "Python + FastAPI", "replica 2/2")
+        Container(analytics_pod2, "Analytics Service", "Python", "replica 2/2")
+        Container(notification_pod1, "Notification Service", "Node.js", "replica 1/2")
+        Container(review_pod1, "Review Service", "Python + FastAPI", "replica 1/2")
+        Container(moderation_pod1, "Moderation Service", "Python", "replica 1/2")
+        Container(rabbitmq_pod3, "RabbitMQ Node", "Erlang", "cluster node 3/3")
+        Container(redis_pod3, "Redis Node", "Redis", "cluster node 3/3")
+    }
+
+    ' === BACKEND NODE 4 ===
+    Deployment_Node(backend_node_4, "Node 4", "k8s-node-4 | c5.large") {
+        Container(notification_pod2, "Notification Service", "Node.js", "replica 2/2")
+        Container(review_pod2, "Review Service", "Python + FastAPI", "replica 2/2")
+        Container(moderation_pod2, "Moderation Service", "Python", "replica 2/2")
+        Container(elastic_pod1, "Elasticsearch Node", "Elasticsearch", "data node 1/3")
+        Container(elastic_pod2, "Elasticsearch Node", "Elasticsearch", "data node 2/3")
+        Container(elastic_pod3, "Elasticsearch Node", "Elasticsearch", "master node")
+    }
+}
+
+' === DATABASE LAYER ===
+Deployment_Node(db_layer, "Database Layer", "Managed Services") {
+
+    ' === POSTGRESQL КЛАСТЕР ===
+    Deployment_Node(postgres_cluster, "PostgreSQL Cluster", "Aurora PostgreSQL") {
+        ContainerDb(postgres_primary, "PostgreSQL Primary", "Aurora", "Запись | pgsql-node-1")
+
+        Deployment_Node(pg_node_2, "Database Node 2", "Физический сервер") {
+            ContainerDb(postgres_slave_1, "PostgreSQL Standby 1", "Aurora", "Чтение | pgsql-node-2")
+        }
+
+        Deployment_Node(pg_node_3, "Database Node 3", "Физический сервер") {
+            ContainerDb(postgres_slave_2, "PostgreSQL Standby 2", "Aurora", "Чтение | pgsql-node-3")
+        }
+    }
+
+    ' === ANALYTICS DATABASE ===
+    Deployment_Node(analytics_db, "Analytics Database", "ClickHouse Cluster") {
+        Deployment_Node(ch_node_1, "ClickHouse Node 1", "Физический сервер") {
+            ContainerDb(clickhouse_1, "ClickHouse Node 1", "ClickHouse", "Data shard 1")
+        }
+
+        Deployment_Node(ch_node_2, "ClickHouse Node 2", "Физический сервер") {
+            ContainerDb(clickhouse_2, "ClickHouse Node 2", "ClickHouse", "Data shard 2")
+        }
+    }
+
+    ' === S3 STORAGE ===
+    Deployment_Node(storage_layer, "Object Storage", "Amazon S3") {
+        ContainerDb(s3_primary, "S3 Bucket", "Amazon S3", "Медиафайлы проектов")
+        ContainerDb(s3_backup, "Backup Bucket", "Amazon S3", "Резервные копии")
+    }
+}
+
+' === MOBILE APPS ===
+Deployment_Node(mobile_layer, "Mobile Applications", "Flutter") {
+    ContainerDb(ios_app, "iOS App", "Flutter", "App Store")
+    ContainerDb(android_app, "Android App", "Flutter", "Google Play")
+}
+
+' === MONITORING & LOGGING ===
+Deployment_Node(monitoring, "Monitoring & Logging", "Отдельный namespace") {
+    Container(prometheus, "Prometheus", "Prometheus", "Сбор метрик")
+    Container(grafana, "Grafana", "Grafana", "Визуализация метрик")
+    Container(loki, "Loki", "Loki", "Сбор логов")
+    Container(promtail, "Promtail", "Promtail", "Агент сбора логов")
+    Container(jaeger, "Jaeger", "Jaeger", "Распределенная трассировка")
+    Container(sentry, "Sentry", "Sentry", "Мониторинг ошибок")
+}
+
+' === EXTERNAL SERVICES ===
+System_Ext(payment_gateway, "Payment Gateway", "Stripe/Tinkoff/PayPal")
+System_Ext(email_service, "Email Service", "SendGrid/AWS SES")
+System_Ext(sms_service, "SMS Service", "Twilio")
+System_Ext(social_api, "Social API", "Facebook/VK OAuth")
+System_Ext(cdn, "CDN", "CloudFront + Cloudflare")
+System_Ext(anti_fraud, "Anti-Fraud", "External fraud detection")
+
+Person(author, "Автор проекта", "Создает и управляет проектами")
+Person(backer, "Спонсор", "Финансирует проекты")
+Person(moderator, "Модератор", "Проверяет проекты")
+Person(admin, "Администратор", "Управляет платформой")
+
+' === ПОЛНЫЕ СВЯЗИ ДЛЯ ВСЕХ СЕРВИСОВ ===
+
+' 1. Основной поток трафика от клиентов
+Rel(author, cdn, "HTTPS", "Доступ к платформе")
+Rel(backer, cdn, "HTTPS", "Доступ к платформе")
+Rel(moderator, cdn, "HTTPS", "Панель модерации")
+Rel(admin, cdn, "HTTPS", "Админ-панель")
+Rel(cdn, ingress_controller, "HTTPS", "Трафик к ingress")
+Rel(ingress_controller, api_gateway, "HTTPS", "Маршрутизация")
+
+' 2. Frontend доставка
+Rel(api_gateway, web_frontend_pod1, "HTTP", "SPA доставка")
+
+' 3. Мобильные приложения
+Rel(ios_app, api_gateway, "HTTPS", "API запросы")
+Rel(android_app, api_gateway, "HTTPS", "API запросы")
+
+' 4. API Gateway -> K8s Services
+Rel(api_gateway, auth_service_svc, "HTTP", "Аутентификация")
+Rel(api_gateway, project_service_svc, "HTTP", "Управление проектами")
+Rel(api_gateway, payment_service_svc, "HTTP", "Платежи")
+Rel(api_gateway, search_service_svc, "HTTP", "Поиск проектов")
+Rel(api_gateway, moderation_service_svc, "HTTP", "Модерация")
+
+' 5. K8s Services -> Pods
+Rel(auth_service_svc, auth_pod1, "HTTP", "LB → auth pods")
+Rel(project_service_svc, project_pod1, "HTTP", "LB → project pods")
+Rel(payment_service_svc, payment_pod1, "HTTP", "LB → payment pods")
+Rel(search_service_svc, search_pod1, "HTTP", "LB → search pods")
+Rel(notification_service_svc, notification_pod1, "HTTP", "LB → notification pods")
+
+' 6. Сервисы -> PostgreSQL
+Rel(auth_pod1, postgres_primary, "JDBC", "Пользователи, сессии")
+Rel(project_pod1, postgres_primary, "JDBC", "Проекты, цели, обновления")
+Rel(payment_pod1, postgres_primary, "JDBC", "Транзакции, платежи")
+Rel(review_pod1, postgres_primary, "JDBC", "Отзывы, рейтинги")
+Rel(moderation_pod1, postgres_primary, "JDBC", "Модерация, жалобы")
+
+' 7. Сервисы -> ClickHouse (аналитика)
+Rel(analytics_pod1, clickhouse_1, "HTTP", "Аналитика проектов")
+Rel(payment_pod1, clickhouse_2, "HTTP", "Аналитика платежей")
+Rel(project_pod1, clickhouse_1, "HTTP", "Метрики проектов")
+
+' 8. Сервисы -> Elasticsearch (поиск)
+Rel(search_pod1, elastic_pod1, "REST", "Поиск проектов")
+Rel(project_pod1, elastic_pod2, "REST", "Индексация проектов")
+
+' 9. Сервисы -> Redis (кэш)
+Rel(auth_pod1, redis_service, "Lettuce", "Сессии, токены")
+Rel(project_pod1, redis_service, "Lettuce", "Кэш проектов")
+Rel(search_pod1, redis_service, "Lettuce", "Кэш поиска")
+Rel(payment_pod1, redis_service, "Lettuce", "Кэш платежей")
+
+' 10. Сервисы -> RabbitMQ (асинхронные события)
+Rel(project_pod1, rabbitmq_service, "AMQP", "События проектов")
+Rel(payment_pod1, rabbitmq_service, "AMQP", "События платежей")
+Rel(notification_pod1, rabbitmq_service, "AMQP", "Обработка уведомлений")
+
+' 11. Кластерные связи
+Rel(rabbitmq_pod1, rabbitmq_pod2, "Erlang Distribution", "RabbitMQ cluster")
+Rel(redis_pod1, redis_pod2, "Redis Cluster", "Redis cluster")
+Rel(elastic_pod1, elastic_pod2, "Gossip Protocol", "Elasticsearch cluster")
+
+' 12. Хранилище файлов
+Rel(project_pod1, s3_primary, "S3 API", "Медиа проектов")
+Rel(auth_pod1, s3_primary, "S3 API", "Аватарки, документы")
+
+' 13. Внешние интеграции
+Rel(payment_pod1, payment_gateway, "HTTPS", "Обработка платежей")
+Rel(notification_pod1, email_service, "HTTPS", "Email уведомления")
+Rel(notification_pod1, sms_service, "HTTPS", "SMS уведомления")
+Rel(auth_pod1, social_api, "HTTPS", "Social auth")
+Rel(payment_pod1, anti_fraud, "HTTPS", "Проверка транзакций")
+
+' 14. Мониторинг
+Rel(prometheus, auth_service_svc, "Metrics", "Метрики auth")
+Rel(prometheus, payment_service_svc, "Metrics", "Метрики платежей")
+Rel(prometheus, postgres_primary, "Metrics", "Метрики БД")
+Rel(promtail, project_pod1, "Logs", "Сбор логов проектов")
+Rel(promtail, payment_pod1, "Logs", "Сбор логов платежей")
+Rel(jaeger, api_gateway, "Traces", "Трассировка запросов")
+
+' 15. Резервное копирование
+Rel(postgres_primary, s3_backup, "Backup", "Ежедневные бэкапы")
+Rel(clickhouse_1, s3_backup, "Backup", "Бэкапы аналитики")
+
+@enduml
