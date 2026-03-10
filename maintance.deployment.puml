@@ -1,354 +1,261 @@
 @startuml
-title Платформа Краудфандинга - Maintenance & Deployment Processes
+title Платформа Краудфандинга - Maintenance & Deployment
+
+!define ICON_MICROSERVICE <color:#4477aa><&cloud></color>
+!define ICON_DATABASE <color:#44aa77><&database></color>
+!define ICON_SECURITY <color:#aa4444><&shield></color>
+!define ICON_MONITOR <color:#aa8844><&eye></color>
+!define ICON_AUTOMATE <color:#7744aa><&cog></color>
 
 skinparam defaultFontName Arial
-skinparam defaultFontSize 12
+skinparam defaultFontSize 11
+skinparam componentStyle rectangle
+skinparam backgroundColor #FEFDFA
+skinparam card {
+  BorderColor #4477aa
+  BorderThickness 1
+  BackgroundColor #F8F9FA
+  FontColor #2E4053
+}
+skinparam note {
+  BorderColor #888888
+  BackgroundColor #FFF9E6
+}
+skinparam arrow {
+  Color #666666
+  Thickness 1
+}
+skinparam rectangle {
+  BorderColor #AAAAAA
+  BackgroundColor #EEEEEE
+  FontStyle bold
+}
 
-' === CI/CD PIPELINE ===
-card "CI/CD Pipeline" {
-  card "Development" {
-    card "Git (Feature Branches)" as git
-    card "Developers" as devs
-    
-    ' Backend tools
-    card "Docker Build (Multi-language)" as build_be
-    card "Unit Tests" as unit_be
-    card "Integ: Testcontainers" as integ_be
-    
-    ' Frontend/Mobile tools
-    card "Build Web/Mobile" as build_fe
-    card "Unit: Jest/Flutter Tests" as unit_fe
-    card "E2E: Playwright/Detox" as e2e
-    
-    card "Security Scan" as security_scan
-    card "Load: k6" as perf
+' === ЦВЕТОВЫЕ КАТЕГОРИИ ===
+' CI/CD: синий (#4477aa)
+' Мониторинг: оранжевый (#aa8844)
+' Обслуживание: зеленый (#44aa77)
+' Автоматизация: фиолетовый (#7744aa)
+' Безопасность: красный (#aa4444)
+
+' === CI/CD PIPELINE (СЖАТАЯ ВЕРСИЯ) ===
+rectangle "<size:14><b>CI/CD Pipeline</b></size>" as cicd_parent #4477aa {
+  
+  card "<b>Development</b>" <<dev>> #D4E6F1 {
+    card "Git Feature Branches" as git
+    card "🔨 Build & Test" as build {
+      card "Backend: Docker + Unit/Integ" as build_be
+      card "Frontend: Build + Jest/E2E" as build_fe
+    }
+    card "🔒 Security Scan" as security_scan
+    card "⚡ Load Testing (k6)" as perf
   }
-
-  card "Staging" {
+  
+  card "<b>Staging</b>" <<stage>> #D5E8D4 {
     card "Deploy to Staging K8s" as staging_deploy
-    card "Fastlane (Beta Release)" as fastlane_beta
-    card "API Contract Tests" as api_tests
+    card "📱 Fastlane (Beta)" as fastlane_beta
     card "Payment Simulation" as payment_sim
+    card "API Contract Tests" as api_tests
   }
-
-  card "Production" {
+  
+  card "<b>Production</b>" <<prod>> #FAD7A0 {
     card "Blue-Green Deployment" as bluegreen
-    card "Fastlane (Store Release)" as fastlane_prod
-    card "Rollback Procedure" as rollback
-    database "Production Kubernetes" as k8s_prod
-    card "App Store / Google Play" as app_stores
+    card "📱 Fastlane (Store)" as fastlane_prod
     card "Payment Gateway Sync" as payment_sync
+    database "Production K8s Cluster" as k8s_prod
   }
 }
 
-' === КОММЕНТАРИИ ДЛЯ CI/CD ===
-note left of fastlane_beta
-  <b>Mobile DevOps (Fastlane)</b>
-  • Сборка .ipa / .apk
-  • Отправка в TestFlight
-  • Управление сертификатами
-  • Авто-скриншоты
-end note
-
-note right of perf
-  <b>Нагрузочное тестирование (k6)</b>
-  • Эмуляция пикового спроса
-  • Тест успешного проекта
-  • Тест процесса оплаты
-  • Проверка SLA транзакций
-end note
-
-note left of payment_sim
-  <b>Тестирование платежей</b>
-  • Stripe Sandbox
-  • Tinkoff тестовый стенд
-  • PayPal Sandbox
-  • Эмуляция различных сценариев
-end note
-
-' === MONITORING & OBSERVABILITY ===
-card "Monitoring & Observability" {
-  card "Prometheus" as prometheus
-  card "Elasticsearch (Logs)" as elk_logs
-  card "Jaeger/Zipkin" as tracing
-  card "AlertManager" as alertmanager
-  card "Grafana Dashboards" as grafana
-  card "Sentry" as sentry
-  card "Fraud Detection Alerts" as fraud_alerts
+' === MONITORING (ГРУППИРОВАННЫЙ) ===
+rectangle "<size:14><b>Monitoring & Observability</b></size>" as monitoring_parent #aa8844 {
+  
+  card "<b>Metrics & Logs</b>" #FFF2CC {
+    card "Prometheus" as prometheus
+    card "ELK Stack" as elk_logs
+    card "Jaeger (Tracing)" as tracing
+    card "Sentry" as sentry
+  }
+  
+  card "<b>Visualization & Alerts</b>" #FFF2CC {
+    card "Grafana Dashboards" as grafana
+    card "AlertManager" as alertmanager
+    card "Fraud Detection" as fraud_alerts
+  }
 }
 
-' === КОММЕНТАРИИ ДЛЯ MONITORING ===
-note right of tracing
-  <b>Distributed Tracing</b>
-  • Отслеживание пути платежа
-  • Auth → Project → Payment → Notification
-  • Поиск узких мест
-  • Визуализация водопада
-end note
-
-note left of sentry
-  <b>Error Tracking</b>
-  • Сбор крэшей iOS/Android
-  • JS ошибки фронтенда
-  • Ошибки в платежах
-  • Группировка инцидентов
-end note
-
-note right of elk_logs
-  <b>Centralized Logging</b>
-  • Логи всех микросервисов
-  • Аудит финансовых операций
-  • Логи модерации проектов
-  • Анализ безопасности
-end note
-
-note left of fraud_alerts
-  <b>Антифрод мониторинг</b>
-  • Подозрительные транзакции
-  • Множественные аккаунты
-  • Подозрительные проекты
-  • Автоматическое блокирование
-end note
-
-' === MAINTENANCE PROCEDURES ===
-card "Maintenance Procedures" {
-  card "PostgreSQL Maintenance" as pg_maint
-  card "ClickHouse Maintenance" as ch_maint
-  card "Elasticsearch Reindexing" as es_maint
-  card "RabbitMQ Maintenance" as rabbit_maint
-  card "Redis Maintenance" as redis_maint
-  card "S3 Lifecycle Policies" as s3_maint
-  card "Daily Backups (Wal-G)" as backups
-  card "SSL Renewal" as ssl
-  card "Payment Reconciliation" as payment_recon
+' === MAINTENANCE (КАТЕГОРИЗИРОВАННЫЙ) ===
+rectangle "<size:14><b>Maintenance Procedures</b></size>" as maintenance_parent #44aa77 {
+  
+  card "<b>Database</b>" #D5E8D4 {
+    card "PostgreSQL (VACUUM, indexes)" as pg_maint
+    card "ClickHouse (partitions)" as ch_maint
+    card "Elasticsearch (reindex)" as es_maint
+  }
+  
+  card "<b>Infrastructure</b>" #D5E8D4 {
+    card "RabbitMQ / Redis" as middleware_maint
+    card "S3 Lifecycle" as s3_maint
+    card "Daily Backups (Wal-G)" as backups
+    card "SSL Renewal" as ssl
+  }
+  
+  card "<b>Business</b>" #D5E8D4 {
+    card "Payment Reconciliation" as payment_recon
+  }
 }
-
-' === КОММЕНТАРИИ ДЛЯ MAINTENANCE ===
-note left of pg_maint
-  <b>Обслуживание PostgreSQL</b>
-  • Очистка VACUUM
-  • Обновление статистики
-  • Проверка индексов
-  • Мониторинг deadlocks
-end note
-
-note right of ch_maint
-  <b>Обслуживание ClickHouse</b>
-  • Оптимизация партиций
-  • MergeTree maintenance
-  • Управление Materialized Views
-  • Очистка устаревших данных
-end note
-
-note left of es_maint
-  <b>Обслуживание Поиска</b>
-  • Zero-downtime reindex проектов
-  • Удаление старых индексов
-  • Оптимизация шардов
-  • Обновление маппинга
-end note
-
-note right of s3_maint
-  <b>Очистка медиа</b>
-  • Удаление временных файлов
-  • Архивация в Glacier
-  • Очистка неудачных проектов
-  • Оптимизация CDN
-end note
-
-note left of rabbit_maint
-  <b>RabbitMQ Maintenance</b>
-  • Управление очередями
-  • Мониторинг Consumer Lag
-  • Очистка старых сообщений
-  • Балансировка кластера
-end note
-
-note right of payment_recon
-  <b>Сверка платежей</b>
-  • Ежедневная сверка с платежными системами
-  • Выявление расхождений
-  • Автоматическое разрешение конфликтов
-  • Отчеты для бухгалтерии
-end note
 
 ' === AUTOMATION ===
-card "Automation" {
-  card "GitOps - ArgoCD" as argocd
-  card "Terraform" as terraform
-  card "Liquibase/Flyway Migrations" as migrations
-  card "Auto-scaling Policies" as autoscaling
-  card "Cron Jobs for Reports" as cron_jobs
+rectangle "<size:14><b>Automation</b></size>" as automation_parent #7744aa {
+  
+  card "<b>Infrastructure as Code</b>" #E1D5E7 {
+    card "GitOps (ArgoCD)" as argocd
+    card "Terraform" as terraform
+  }
+  
+  card "<b>Operations</b>" #E1D5E7 {
+    card "DB Migrations (Flyway)" as migrations
+    card "Auto-scaling Policies" as autoscaling
+    card "Scheduled Jobs" as cron_jobs
+  }
 }
 
-note right of migrations
-  <b>Миграции БД</b>
-  • Версионирование схемы
-  • Накат в Init-контейнерах
-  • Проверка совместимости
-  • Откат неудачных миграций
-end note
-
-note left of autoscaling
-  <b>Автомасштабирование</b>
-  • HPA для микросервисов
-  • Автоскейлинг нод K8s
-  • Scale-to-zero для ночи
-  • Реагирование на всплески трафика
-end note
-
-note right of cron_jobs
-  <b>Автоматические задачи</b>
-  • Ежедневная аналитика
-  • Напоминания авторам
-  • Автоматическое закрытие проектов
-  • Генерация финансовых отчетов
-end note
-
-' === SERVICE LEVEL INDICATORS ===
-card "Business SLIs" {
-  card "Payment Success: >99.9%" as payment_sli
-  card "Project Load Time: <2s" as project_sli
-  card "Search Latency: <500ms" as search_sli
-  card "Notification Delivery: <5s" as notification_sli
-  card "Moderation Queue: <24h" as moderation_sli
+' === COMPLIANCE & DR ===
+rectangle "<size:14><b>Compliance & DR</b></size>" as compliance_parent #aa4444 {
+  
+  card "<b>Compliance</b>" #F9D7D7 {
+    card "PCI DSS / GDPR" as compliance
+    card "Security Audits" as audits
+  }
+  
+  card "<b>Disaster Recovery</b>" #F9D7D7 {
+    card "Multi-region Replication" as dr_multiregion
+    card "Backup Drills / Failover" as dr_procedures
+  }
 }
 
-note left of payment_sli
-  <b>Успешность платежей</b>
-  • Критическая бизнес-метрика
-  • Мониторинг всех платежных шлюзов
-  • Автоматическое оповещение о падениях
-  • Резервные платежные системы
-end note
+' === SLIs (ВЫНЕСЕНЫ ОТДЕЛЬНО) ===
+card "<b>Service Level Indicators</b>" as sli_card #FAD7A0 {
+  together {
+    card "Payment Success >99.9%" as payment_sli
+    card "Project Load <2s" as project_sli
+  }
+  together {
+    card "Search Latency <500ms" as search_sli
+    card "Notification <5s" as notification_sli
+  }
+  card "Moderation Queue <24h" as moderation_sli
+}
 
-note right of moderation_sli
-  <b>Скорость модерации</b>
-  • Время от отправки на модерацию до решения
-  • Автоматическое распределение задач
-  • Оповещение о превышении SLA
-  • Аналитика загрузки модераторов
-end note
-
-' === СВЯЗИ ===
-
-' Pipeline
-devs --> git
-git --> build_be
-git --> build_fe
-
-build_be --> unit_be
-unit_be --> integ_be
-integ_be --> staging_deploy
-
-build_fe --> unit_fe
-unit_fe --> e2e
-e2e --> fastlane_beta
-e2e --> staging_deploy
-
-staging_deploy --> perf
-staging_deploy --> payment_sim
-perf --> api_tests
-payment_sim --> api_tests
-
+' === КЛЮЧЕВЫЕ СВЯЗИ (ТОЛЬКО ГЛАВНЫЕ) ===
+git --> build
+build --> staging_deploy
+staging_deploy --> api_tests
 api_tests --> bluegreen
-api_tests --> fastlane_prod
-
 bluegreen --> k8s_prod
-fastlane_prod --> app_stores
-bluegreen --> payment_sync
+fastlane_beta --> fastlane_prod
 
-' Security
-git --> security_scan
-security_scan --> staging_deploy
-
-' Monitoring connections
+' Мониторинг
 k8s_prod --> prometheus
 k8s_prod --> elk_logs
-k8s_prod --> tracing
-app_stores --> sentry
-payment_sync --> fraud_alerts
-
 prometheus --> grafana
 elk_logs --> grafana
-tracing --> grafana
-prometheus --> alertmanager
 fraud_alerts --> alertmanager
 
-' Maintenance connections
-pg_maint --> k8s_prod
-ch_maint --> k8s_prod
-es_maint --> k8s_prod
-rabbit_maint --> k8s_prod
-redis_maint --> k8s_prod
-s3_maint --> k8s_prod
-backups --> k8s_prod
-migrations --> k8s_prod
-payment_recon --> payment_sync
-
-' Automation connections
+' Автоматизация
 argocd --> k8s_prod
 terraform --> k8s_prod
+migrations --> k8s_prod
 autoscaling --> k8s_prod
-cron_jobs --> k8s_prod
 
-' Metrics connections
+' Метрики
 prometheus --> payment_sli
 prometheus --> project_sli
-prometheus --> search_sli
-prometheus --> notification_sli
 elk_logs --> moderation_sli
 
-note right of k8s_prod
-  <b>Production Environment</b>
-  • Микросервисы (Node.js, Python, Java)
-  • PostgreSQL Cluster
-  • ClickHouse для аналитики
-  • Elasticsearch для поиска
-  • Redis для кэша
-  • RabbitMQ для асинхронности
-  • S3 для медиа
+' === УЛУЧШЕННЫЕ КОММЕНТАРИИ (МЕНЬШЕ, НО ИНФОРМАТИВНЕЕ) ===
+note top of build_be
+  <b>Multi-language Build</b>
+  Node.js, Python, Java
+  Docker containers
 end note
 
-' === ADDITIONAL COMPONENTS ===
-card "Compliance & Security" {
-  card "PCI DSS Compliance" as pci
-  card "GDPR Compliance" as gdpr
-  card "Regular Security Audits" as audits
-  card "Penetration Testing" as pentest
-}
+note top of fastlane_beta
+  <b>Mobile DevOps</b>
+  TestFlight / Beta releases
+  Certificate management
+end note
 
-card "Disaster Recovery" {
-  card "Multi-region Replication" as dr_multiregion
-  card "Backup Restore Drills" as dr_drills
-  card "Failover Procedures" as dr_failover
-  card "Incident Response Plan" as dr_incident
-}
+note top of payment_sim
+  <b>Payment Testing</b>
+  Stripe, Tinkoff, PayPal
+  Sandbox environments
+  Edge cases simulation
+end note
 
-' Compliance connections
-security_scan --> pci
-k8s_prod --> gdpr
-pentest --> audits
+note left of tracing
+  <b>Distributed Tracing</b>
+  End-to-end payment flow
+  Performance bottleneck detection
+end note
 
-' Disaster recovery
-backups --> dr_drills
-k8s_prod --> dr_multiregion
-alertmanager --> dr_incident
+note right of fraud_alerts
+  <b>Anti-fraud Monitoring</b>
+  Suspicious transactions
+  Automated blocking
+  Pattern detection
+end note
 
-note left of pci
-  <b>PCI DSS Compliance</b>
-  • Требования для обработки карт
-  • Регулярные аудиты
-  • Шифрование данных
-  • Сегментация сети
+note left of pg_maint
+  <b>PostgreSQL Care</b>
+  VACUUM, statistics, indexes
+  Deadlock monitoring
+end note
+
+note right of backups
+  <b>Wal-G Backups</b>
+  Point-in-time recovery
+  Daily full + WAL archiving
+  Cross-region replication
+end note
+
+note left of payment_recon
+  <b>Daily Reconciliation</b>
+  Payment gateway matching
+  Discrepancy resolution
+  Financial reports
+end note
+
+note right of autoscaling
+  <b>Auto-scaling</b>
+  HPA based on load
+  Scale-to-zero off-peak
+  Burst handling
+end note
+
+note left of compliance
+  <b>Compliance</b>
+  PCI DSS for payments
+  GDPR for user data
+  Regular audits
 end note
 
 note right of dr_multiregion
-  <b>Мультирегион развертывание</b>
-  • Основной регион: eu-west-1
-  • Резервный регион: eu-central-1
-  • Geo-replication S3
-  • DNS failover через Route53
+  <b>Multi-region DR</b>
+  Primary: eu-west-1
+  Standby: eu-central-1
+  DNS failover (Route53)
 end note
+
+note bottom of k8s_prod
+  <b>Production Environment</b>
+  • Microservices (Node.js, Python, Java)
+  • PostgreSQL + ClickHouse
+  • Elasticsearch + Redis
+  • RabbitMQ + S3
+  <i>High availability across AZs</i>
+end note
+
+' === ВИЗУАЛЬНОЕ РАЗДЕЛЕНИЕ ===
+footer %filename% - Optimized for readability
 
 @enduml
